@@ -1,8 +1,8 @@
 #include "mail_service.h"
 
-#include "smtp_client.h"        // твой сетевой модуль
-#include "emailvalidator.h"     // из UMail
-#include "quotedprintable.h"    // из UMail
+#include "smtp_client.h"        //сетевой модуль
+#include "emailvalidator.h"     
+#include "quotedprintable.h"    
 #include <fstream>
 #include <cctype>
 #include "base64.h"
@@ -30,7 +30,6 @@ static std::string wrap76(const std::string& s) {
 }
 
 // Простая base64 для байтов (чтобы вложения работали 100%)
-// (не зависит от того, какой base64 у помощника)
 static std::string base64EncodeBytes(const std::vector<unsigned char>& data) {
     static const char* T = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     std::string out;
@@ -51,7 +50,6 @@ static std::string base64EncodeBytes(const std::vector<unsigned char>& data) {
         out.push_back((i <= data.size()) ? T[triple & 0x3F] : '=');
     }
 
-    // поправка '=' при нехватке байтов
     size_t mod = data.size() % 3;
     if (mod == 1) { out[out.size() - 1] = '='; out[out.size() - 2] = '='; }
     if (mod == 2) { out[out.size() - 1] = '='; }
@@ -71,7 +69,7 @@ static std::string joinToHeader(const std::vector<std::string>& to) {
 
 bool MailService::hasNonAscii(const std::string& s) {
     for (unsigned char c : s) {
-        if (c >= 128) return true; // русские/utf-8 байты
+        if (c >= 128) return true; 
     }
     return false;
 }
@@ -86,15 +84,15 @@ static std::string wrapBase64_76(const std::string& b64) {
 }
 
 std::string MailService::buildRawMessage(const MailDraft& draft) {
-    // --- SUBJECT (RFC2047) ---
-    std::string subjectUtf8 = draft.subject;   // должно быть UTF-8
+    // --- SUBJECT ---
+    std::string subjectUtf8 = draft.subject;   
     std::string subjectHeader = subjectUtf8;
     if (hasNonAscii(subjectUtf8)) {
         subjectHeader = "=?UTF-8?B?" + Base64::encode(subjectUtf8) + "?=";
     }
 
-    // --- BODY (quoted-printable если есть не-ASCII) ---
-    std::string bodyUtf8 = draft.body;         // должно быть UTF-8
+    // --- BODY ---
+    std::string bodyUtf8 = draft.body;
     std::string bodyOut = bodyUtf8;
     std::string bodyCte = "7bit";
     if (hasNonAscii(bodyUtf8)) {
@@ -141,7 +139,6 @@ std::string MailService::buildRawMessage(const MailDraft& draft) {
         std::string bin(reinterpret_cast<const char*>(a.data.data()), a.data.size());
         std::string b64 = Base64::encode(bin);
 
-        // --- ИСПРАВЛЕНИЕ: кодируем русское имя файла для email ---
         std::string encodedFilename;
 
         // Проверяем, есть ли не-ASCII символы
@@ -155,11 +152,9 @@ std::string MailService::buildRawMessage(const MailDraft& draft) {
 
         if (hasNonAscii) {
             // Русское имя - кодируем в Base64 для заголовка (RFC 2047)
-            // Формат: =?UTF-8?B?BASE64_STRING?=
             encodedFilename = "=?UTF-8?B?" + Base64::encode(a.filename) + "?=";
         }
         else {
-            // Английское имя - оставляем как есть
             encodedFilename = a.filename;
         }
 
@@ -180,7 +175,7 @@ std::string MailService::buildRawMessage(const MailDraft& draft) {
 bool MailService::send(const SmtpSettings& smtp, const MailDraft& draft, std::string& errorOut) {
     errorOut.clear();
 
-    // 1) Валидация адресов (UMail)
+    // 1) Валидация адресов
     if (!EmailValidator::isValidEmail(draft.from)) {
         errorOut = "Неверный адрес отправителя (From).";
         return false;
@@ -199,7 +194,7 @@ bool MailService::send(const SmtpSettings& smtp, const MailDraft& draft, std::st
     // 2) Собираем готовое письмо
     std::string raw = buildRawMessage(draft);
 
-    // 3) Отправка по сети (твой модуль)
+    // 3) Отправка по сети
     SmtpClient client(smtp.server, smtp.port);
 
     if (!client.connect()) {

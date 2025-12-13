@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-// Подключаем Boost.Asio. В лекциях он как раз используется для сетей.
+// Подключаем Boost.Asio.
 #include <boost/asio.hpp>
 
 class SmtpClient
@@ -35,14 +35,14 @@ public:
     SmtpClient(const SmtpClient&) = delete;
     SmtpClient& operator=(const SmtpClient&) = delete;
 
-    // Подключиться к серверу и выполнить HELO (пока заглушка).
+    // Подключиться к серверу и выполнить HELO
     bool connect();
 
-    // Авторизация по схеме AUTH LOGIN (пока заглушка).
+    // Авторизация по схеме AUTH LOGIN
     bool authenticateLogin(const std::string& user,
         const std::string& password);
 
-    // Отправка письма (пока заглушка).
+    // Отправка письма
     bool sendMail(const std::string& from,
         const std::vector<std::string>& to,
         const std::string& rawMessage);
@@ -60,7 +60,7 @@ public:
     const std::string& lastServerReply() const;
 
 private:
-    // Вспомогательные методы — пока просто заглушки
+    // Вспомогательные методы
     bool sendLine(const std::string& line);
     bool readReply(int& code);
     bool expectCode(int expectedCode);
@@ -70,7 +70,7 @@ private:
     unsigned short port_;
 
     // === Поля Boost.Asio ===
-    // io_context (раньше в лекциях могли называть io_service)
+    // io_context
     boost::asio::io_context ioContext_;
     // TCP-сокет, привязанный к этому io_context
     boost::asio::ip::tcp::socket socket_;
@@ -83,4 +83,4 @@ private:
     std::string lastReplyLine_;
 };
 
-#endif // SMTP_CLIENT_H
+#endif

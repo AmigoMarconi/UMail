@@ -3,9 +3,9 @@
 #include <vector>
 
 struct Attachment {
-    std::string filename;                 // например "test.png" (лучше латиницей)
-    std::string mimeType;                 // например "image/png", иначе "application/octet-stream"
-    std::vector<unsigned char> data;      // байты файла
+    std::string filename;
+    std::string mimeType;
+    std::vector<unsigned char> data; 
 };
 
 struct SmtpSettings {

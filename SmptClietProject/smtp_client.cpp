@@ -3,9 +3,8 @@
 #include "base64.h"
 
 #include <cctype>   // для std::isdigit
-#include <string>   // на всякий случай
+#include <string>
 
-// Чтобы короче писать tcp::resolver, tcp::socket
 using boost::asio::ip::tcp;
 
 // Конструктор: сохраняем сервер и порт, создаём io_context и сокет.
@@ -22,11 +21,6 @@ SmtpClient::SmtpClient(const std::string& server, unsigned short port)
 {
 }
 
-// Реальный connect() c Boost.Asio:
-// 1) resolve(host, port)
-// 2) connect()
-// 3) читаем код 220
-// 4) отправляем EHLO localhost и ждём 250
 bool SmtpClient::connect()
 {
     // Сброс состояния
@@ -118,7 +112,6 @@ bool SmtpClient::connect()
     return true;
 }
 
-// Пока авторизация — простая заглушка.
 
 bool SmtpClient::authenticateLogin(const std::string& user,
     const std::string& password)
@@ -202,9 +195,6 @@ bool SmtpClient::authenticateLogin(const std::string& user,
     return true;
 }
 
-
-// Заглушка отправки письма — настоящую реализацию
-
 bool SmtpClient::sendMail(const std::string& from,
     const std::vector<std::string>& to,
     const std::string& rawMessage)
@@ -215,10 +205,6 @@ bool SmtpClient::sendMail(const std::string& from,
         lastErrorMessage_ = "Not connected";
         return false;
     }
-
-    // Авторизация может быть не обязательной (локальный сервер smtp4dev).
-    // Поэтому не прерываемся, если authenticated_ == false.
-    // Если сервер требует AUTH, он сам вернёт ошибку на MAIL FROM / RCPT TO.
 
     // --- MAIL FROM ---
     std::string mailFromCmd = "MAIL FROM:<" + from + ">";
@@ -301,7 +287,6 @@ bool SmtpClient::sendMail(const std::string& from,
 
     // --- Отправляем само письмо ---
     std::string dataToSend = rawMessage;
-    // Убеждаемся, что письмо заканчивается на \r\n
     if (dataToSend.size() < 2 ||
         dataToSend[dataToSend.size() - 2] != '\r' ||
         dataToSend[dataToSend.size() - 1] != '\n')
@@ -351,15 +336,13 @@ void SmtpClient::disconnect()
     // Если соединение ещё активно, попробуем вежливо завершить сессию.
     if (socket_.is_open() && connected_)
     {
-        // Отправляем QUIT, но не считаем ошибку фатальной,
-        // если вдруг сервер уже закрыл соединение.
         sendLine("QUIT");
 
         int code = 0;
-        readReply(code); // обычно 221, но, если нет — просто игнорируем
+        readReply(code);
     }
 
-    // В любом случае закрываем сокет.
+    //закрываем сокет.
     boost::system::error_code ec;
     if (socket_.is_open())
     {
@@ -398,7 +381,6 @@ const std::string& SmtpClient::lastServerReply() const
 
 // --- Вспомогательные методы ---
 
-// Отправить строку + CRLF в сокет.
 bool SmtpClient::sendLine(const std::string& line)
 {
     if (!socket_.is_open())
@@ -422,9 +404,6 @@ bool SmtpClient::sendLine(const std::string& line)
     return true;
 }
 
-// Читаем одну строку ответа сервера до '\n',
-// сохраняем её в lastReplyLine_ и выдёргиваем
-// первые три символа как числовой код.
 bool SmtpClient::readReply(int& code)
 {
     code = 0;
@@ -441,7 +420,7 @@ bool SmtpClient::readReply(int& code)
     boost::system::error_code ec;
 
     std::size_t n = boost::asio::read_until(socket_, buffer, "\n", ec);
-    (void)n; // просто чтобы не ругался компилятор
+    (void)n;
 
     if (ec)
     {
@@ -453,13 +432,11 @@ bool SmtpClient::readReply(int& code)
     std::istream is(&buffer);
     std::getline(is, lastReplyLine_);
 
-    // Убираем '\r' в конце, если он есть
     if (!lastReplyLine_.empty() && lastReplyLine_.back() == '\r')
     {
         lastReplyLine_.pop_back();
     }
 
-    // Должно быть минимум 3 символа с цифрами
     if (lastReplyLine_.size() < 3 ||
         !std::isdigit(static_cast<unsigned char>(lastReplyLine_[0])) ||
         !std::isdigit(static_cast<unsigned char>(lastReplyLine_[1])) ||
