@@ -8,7 +8,6 @@
 
 const std::string QuotedPrintable::HEX_CHARS = "0123456789ABCDEF";
 
-// ИСПРАВЛЕННАЯ ФУНКЦИЯ: Правильно обрабатывает UTF-8
 std::string QuotedPrintable::encodeText(const std::string& utf8_text, size_t lineLength) {
     std::stringstream result;
     size_t linePos = 0;
@@ -52,7 +51,7 @@ std::string QuotedPrintable::encodeText(const std::string& utf8_text, size_t lin
     return result.str();
 }
 
-// ИСПРАВЛЕННАЯ ФУНКЦИЯ для заголовков
+//ФУНКЦИЯ для заголовков
 std::string QuotedPrintable::encodeHeader(const std::string& utf8_text,
     const std::string& charset) {
 
@@ -90,14 +89,13 @@ std::string QuotedPrintable::encodeHeader(const std::string& utf8_text,
     return result.str();
 }
 
-// Исправленная функция декодирования
+
 std::string QuotedPrintable::decode(const std::string& encoded) {
     std::stringstream result;
     size_t i = 0;
 
     while (i < encoded.length()) {
         if (encoded[i] == '=') {
-            // Проверяем мягкий перенос строки
             if (i + 2 < encoded.length() &&
                 encoded[i + 1] == '\r' && encoded[i + 2] == '\n') {
                 i += 3; // пропускаем =\r\n
