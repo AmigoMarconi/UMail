@@ -1,11 +1,57 @@
 #include "smtp_client.h"
-
+#include "iostream"
 #include "base64.h"
-
+#include <Windows.h>
 #include <cctype>   // для std::isdigit
 #include <string>
 
 using boost::asio::ip::tcp;
+
+static std::wstring GetLastSocketErrorW()
+{
+    DWORD err = WSAGetLastError();
+
+    wchar_t* msg = nullptr;
+    FormatMessageW(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER |
+        FORMAT_MESSAGE_FROM_SYSTEM |
+        FORMAT_MESSAGE_IGNORE_INSERTS,
+        nullptr,
+        err,
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        (LPWSTR)&msg,
+        0,
+        nullptr
+    );
+
+    std::wstring result = msg ? msg : L"Unknown socket error";
+    if (msg) LocalFree(msg);
+
+    return result;
+}
+
+static std::string WStringToUtf8(const std::wstring& ws)
+{
+    if (ws.empty()) return {};
+
+    int size = WideCharToMultiByte(
+        CP_UTF8, 0,
+        ws.c_str(), (int)ws.size(),
+        nullptr, 0,
+        nullptr, nullptr
+    );
+
+    std::string out(size, '\0');
+
+    WideCharToMultiByte(
+        CP_UTF8, 0,
+        ws.c_str(), (int)ws.size(),
+        out.data(), size,
+        nullptr, nullptr
+    );
+
+    return out;
+}
 
 // Конструктор: сохраняем сервер и порт, создаём io_context и сокет.
 SmtpClient::SmtpClient(const std::string& server, unsigned short port)
@@ -37,7 +83,8 @@ bool SmtpClient::connect()
     if (ec)
     {
         lastError_ = SmtpError::ResolveError;
-        lastErrorMessage_ = "Resolve failed: " + ec.message();
+        std::wstring werr = GetLastSocketErrorW();
+        lastErrorMessage_ = "Resolve failed: " + WStringToUtf8(werr);
         return false;
     }
 
@@ -46,7 +93,8 @@ bool SmtpClient::connect()
     if (ec)
     {
         lastError_ = SmtpError::ConnectError;
-        lastErrorMessage_ = "Connect failed: " + ec.message();
+        std::wstring werr = GetLastSocketErrorW();
+        lastErrorMessage_ = "Connect failed: " + WStringToUtf8(werr);
         return false;
     }
 

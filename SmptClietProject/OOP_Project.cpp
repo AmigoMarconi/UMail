@@ -73,6 +73,27 @@ static std::string WStringToUtf8(const std::wstring& ws) {
     return out;
 }
 
+static std::wstring Utf8ToWString(const std::string& s)
+{
+    if (s.empty()) return L"";
+
+    int size = MultiByteToWideChar(
+        CP_UTF8, 0,
+        s.c_str(), (int)s.size(),
+        nullptr, 0
+    );
+
+    std::wstring out(size, L'\0');
+    MultiByteToWideChar(
+        CP_UTF8, 0,
+        s.c_str(), (int)s.size(),
+        out.data(), size
+    );
+
+    return out;
+}
+
+
 static std::wstring TrimW(std::wstring s) {
     auto notSpace = [](wchar_t c) { return c != L' ' && c != L'\t' && c != L'\r' && c != L'\n'; };
     while (!s.empty() && !notSpace(s.front())) s.erase(s.begin());
@@ -243,7 +264,7 @@ static void SendEmail() {
         AppendLog(L"OK: письмо отправлено.");
     }
     else {
-        AppendLog(L"FAIL: " + std::wstring(err.begin(), err.end()));
+        AppendLog(L"FAIL: " + Utf8ToWString(err));
     }
 }
 

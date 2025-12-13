@@ -198,7 +198,7 @@ bool MailService::send(const SmtpSettings& smtp, const MailDraft& draft, std::st
     SmtpClient client(smtp.server, smtp.port);
 
     if (!client.connect()) {
-        errorOut = "Connect failed: " + client.lastErrorMessage();
+        errorOut = client.lastErrorMessage();
         return false;
     }
 
