@@ -138,16 +138,37 @@ std::string MailService::buildRawMessage(const MailDraft& draft) {
 
     // 2) Части-вложения
     for (const auto& a : draft.attachments) {
-        // байты -> string (может содержать нули, это ок)
         std::string bin(reinterpret_cast<const char*>(a.data.data()), a.data.size());
         std::string b64 = Base64::encode(bin);
 
+        // --- ИСПРАВЛЕНИЕ: кодируем русское имя файла для email ---
+        std::string encodedFilename;
+
+        // Проверяем, есть ли не-ASCII символы
+        bool hasNonAscii = false;
+        for (unsigned char c : a.filename) {
+            if (c >= 128) {
+                hasNonAscii = true;
+                break;
+            }
+        }
+
+        if (hasNonAscii) {
+            // Русское имя - кодируем в Base64 для заголовка (RFC 2047)
+            // Формат: =?UTF-8?B?BASE64_STRING?=
+            encodedFilename = "=?UTF-8?B?" + Base64::encode(a.filename) + "?=";
+        }
+        else {
+            // Английское имя - оставляем как есть
+            encodedFilename = a.filename;
+        }
+
         msg += "--" + boundary + "\r\n";
-        msg += "Content-Type: " + a.mimeType + "; name=\"" + a.filename + "\"\r\n";
+        msg += "Content-Type: " + a.mimeType + "; name=\"" + encodedFilename + "\"\r\n";
         msg += "Content-Transfer-Encoding: base64\r\n";
-        msg += "Content-Disposition: attachment; filename=\"" + a.filename + "\"\r\n";
+        msg += "Content-Disposition: attachment; filename=\"" + encodedFilename + "\"\r\n";
         msg += "\r\n";
-        msg += wrapBase64_76(b64);  // обязательно с переносами строк
+        msg += wrapBase64_76(b64);
     }
 
     // конец multipart

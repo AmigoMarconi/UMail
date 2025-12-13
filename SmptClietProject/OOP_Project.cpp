@@ -681,7 +681,11 @@ static void SendEmail() {
         std::filesystem::path p(wpath);
 
         Attachment a;
-        a.filename = p.filename().string();
+
+        // Получаем имя файла в UTF-8
+        std::wstring wfilename = p.filename().wstring();
+        a.filename = WStringToUtf8(wfilename);  // UTF-16 → UTF-8
+
         a.mimeType = GuessMimeType(p);
 
         if (!ReadFileBytes(p, a.data)) {
@@ -961,7 +965,7 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
             x + wLabel, y, 568, 120, hWnd, (HMENU)(INT_PTR)IDC_LOG, nullptr, nullptr);
         SendMessageW(g_log, WM_SETFONT, (WPARAM)hFont, TRUE);
 
-        AppendLog(L"GUI готов. Нажмите Прикрепить... чтобы добавить файл, затем Отправить.");
+        AppendLog(L"UMail готов. Нажмите << Прикрепить... >> чтобы добавить файл, затем << Отправить >>.");
         break;
     }
 
@@ -1000,27 +1004,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         return 1; // Фон обработан
     }
 
-                      // Обработка двойного клика для удаления файла
-    case WM_LBUTTONDBLCLK: {
-        // Проверяем, был ли двойной клик по списку файлов
-        POINT pt;
-        pt.x = LOWORD(lParam);
-        pt.y = HIWORD(lParam);
-
-        RECT listRect;
-        if (g_attachList && GetWindowRect(g_attachList, &listRect)) {
-            ScreenToClient(hWnd, (LPPOINT)&listRect.left);
-            ScreenToClient(hWnd, (LPPOINT)&listRect.right);
-
-            if (PtInRect(&listRect, pt)) {
-                // Двойной клик по списку - удаляем выбранный файл
-                RemoveSelectedFile();
-                return 0;
-            }
-        }
-        break;
-    }
-
     case WM_COMMAND: {
         int id = LOWORD(wParam);
 
@@ -1043,12 +1026,6 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
 
         if (id == IDC_BTN_SEND && HIWORD(wParam) == BN_CLICKED) {
             SendEmail();
-            return 0;
-        }
-
-        // Очистка всех файлов по двойному клику на списке
-        if (id == IDC_ATTACH_LIST && HIWORD(wParam) == LBN_DBLCLK) {
-            RemoveSelectedFile();
             return 0;
         }
 
@@ -1078,7 +1055,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE, PWSTR, int nCmdShow) {
     RegisterClassExW(&wc);
 
     HWND hWnd = CreateWindowExW(
-        0, CLASS_NAME, L"UMail GUI (Core интеграция)",
+        0, CLASS_NAME, L"UMail GUI",
         WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
         CW_USEDEFAULT, CW_USEDEFAULT, 720, 640,
         nullptr, nullptr, hInst, nullptr
